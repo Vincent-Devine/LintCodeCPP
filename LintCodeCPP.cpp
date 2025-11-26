@@ -6,7 +6,7 @@ int AddNumber(int a, int b)
     return a + b;
 }
 
-void some_function()
+void SomeFunction()
 {
     std::cout << "some function" << std::endl;
 }
