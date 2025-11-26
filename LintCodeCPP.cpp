@@ -1,6 +1,7 @@
 #include <iostream>
 #include <string>
 #include <math.h>
+#include "LintClass.hpp"
 
 int AddNumber(int a, int b)
 {
