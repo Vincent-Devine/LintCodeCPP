@@ -34,4 +34,4 @@ jobs:
           
           # This enables the PR comments/review feature
           tidy-review: true
-          comment-on-dirty: true
+          thread-comments: 'all'
