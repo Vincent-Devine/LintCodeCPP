@@ -1,14 +1,19 @@
 #include <iostream>
 #include <string>
 
-int Add(int a, int b)
+int AddNumber(int a, int b)
 {
     return a + b;
+}
+
+void some_function()
+{
+    std::cout << "some function" << std::endl;
 }
 
 int main()
 {
     std::cout << "Hello World!" << std::endl;
-    std::cout << Add(1, 1) << std::endl;
+    std::cout << AddNumber(1, 1) << std::endl;
     return 0;
 }

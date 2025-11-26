@@ -1,0 +1,37 @@
+name: Windows Clang-Tidy
+
+on:
+  pull_request:
+    paths:
+      - '**.cpp'
+      - '**.hpp'
+      - '**.c'
+      - '**.h'
+
+jobs:
+  cpp-linter:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      # 1. Generate the Compilation Database (Essential!)
+      # We use Ninja because the standard Visual Studio generator 
+      # doesn't always support CMAKE_EXPORT_COMPILE_COMMANDS easily.
+      - name: Generate compile_commands.json
+        run: |
+          cmake -S . -B build -G "Ninja" -DCMAKE_EXPORT_COMPILE_COMMANDS=ON
+
+      # 2. Run the Linter
+      - uses: cpp-linter/cpp-linter-action@v2
+        id: linter
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          style: ''                           # Disable clang-format (optional)
+          tidy-checks: '*'                    # Enable all checks (or list specific ones)
+          database: 'build'                   # Folder where we made compile_commands.json
+          version: '18'                       # Clang version to use
+          
+          # This enables the PR comments/review feature
+          tidy-review: true
+          comment-on-dirty: true
