@@ -20,7 +20,7 @@ jobs:
       - name: Run naming linter
         id: lint
         run: |
-          python3 lint_naming.py || true
+          python3 LinterNamingConventions.py || true
 
       - name: Read lint output
         id: read_output
