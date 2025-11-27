@@ -64,36 +64,42 @@ jobs:
         with:
           github-token: ${{ secrets.GITHUB_TOKEN }}
           script: |
-            const core = require('@actions/core');
-            const Buffer = require('buffer').Buffer;
-            
-            // 1. Decode the Base64 content
+            // 1. Decode the Base64 content from the Python linter
             const raw = Buffer.from("${{ steps.read_suggestions.outputs.content }}", 'base64').toString('utf-8');
-            const lines = raw.split("\n");
+            const suggestions = raw.split("\n").filter(line => line.trim());
 
-            for (const line of lines) {
-              if (!line.trim()) continue;
+            // 2. Get the list of modified files in the PR
+            const prFiles = await github.rest.pulls.listFiles({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              pull_number: context.payload.pull_request.number
+            });
 
-              // 2. Parse our custom format: FILE|LINE|CODE
+            const modifiedFiles = prFiles.data.map(f => f.filename);
+
+            // 3. Post only inline suggestions for files modified in this PR
+            for (const line of suggestions) {
               const parts = line.split("|");
               if (parts.length < 3) continue;
 
-              const path = parts[0].trim(); 
-              const lineNumber = parseInt(parts[1].trim(), 10);
+              const path = parts[0].trim();
+              const lineNumber = parseInt(parts[1].trim());
               const codeSuggestion = parts.slice(2).join("|");
 
-              // 3. Create the Review Comment with the SUGGESTION BLOCK
+              // Ignore suggestions for files not in the PR
+              if (!modifiedFiles.includes(path)) continue;
+
               await github.rest.pulls.createReviewComment({
                 owner: context.repo.owner,
                 repo: context.repo.repo,
                 pull_number: context.payload.pull_request.number,
                 commit_id: context.payload.pull_request.head.sha,
-                path: path, // This path is now guaranteed to be relative and from the changed-files action
+                path: path,
                 line: lineNumber,
                 side: "RIGHT",
-                body: "```suggestion\\n" + codeSuggestion + "\n```"
+                body: "```suggestion\n" + codeSuggestion + "\n```"
               });
             }
-            
-            // Fail the workflow to block the PR until fixed
-            core.setFailed("Naming conventions violations found. See inline suggestions.");
+
+            // Fail the workflow to block the PR
+            core.setFailed("Naming conventions violations found.");
