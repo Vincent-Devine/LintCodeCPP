@@ -45,7 +45,6 @@ jobs:
             const lines = content.split("\n");
             for (const line of lines) {
               if (!line.includes("→ suggested:")) continue;
-              // Format attendu: file:line - description → suggested: 'NewName'
               const m = line.match(/^(.+):(\d+) - .+ → suggested: '(.+)'$/);
               if (!m) continue;
 
