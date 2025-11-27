@@ -22,4 +22,4 @@ jobs:
       - name: Run naming linter
         run: |
           echo "Running custom naming linter..."
-          py .\LinterNamingConventions.py || exit 1
+          python3 .\LinterNamingConventions.py || exit 1
