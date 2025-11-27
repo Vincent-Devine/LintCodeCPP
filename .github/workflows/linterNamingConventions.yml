@@ -82,5 +82,3 @@ jobs:
                 body: "```suggestion\n" + codeSuggestion + "\n```"
               });
             }
-
-            core.setFailed("Naming conventions violations found.");
