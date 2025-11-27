@@ -1,9 +1,11 @@
-name: Linter Naming Conventions
+name: Lint Naming Conventions
 
+# Déclencheur sur Pull Request vers main/master
 on:
   pull_request:
-    branches: [ main, dev ]
+    branches: [ main, master ]
 
+# Permissions nécessaires pour poster dans la PR
 permissions:
   contents: read
   pull-requests: write
@@ -13,24 +15,28 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
+      # 1️⃣ Checkout du repo
       - name: Checkout repository
         uses: actions/checkout@v4
 
+      # 2️⃣ Installer Python
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
           python-version: "3.x"
 
+      # 3️⃣ Exécuter le linter
       - name: Run naming linter
         id: lint
         run: |
           python3 LinterNamingConventions.py || true
 
-      - name: Read lint output
+      # 4️⃣ Lire les suggestions générées
+      - name: Read lint suggestions
         id: read_output
         run: |
-          if [ -f lint_output.txt ]; then
-            CONTENT=$(cat lint_output.txt)
+          if [ -f lint_suggestions.txt ]; then
+            CONTENT=$(cat lint_suggestions.txt)
             echo "content<<EOF" >> $GITHUB_OUTPUT
             echo "$CONTENT" >> $GITHUB_OUTPUT
             echo "EOF" >> $GITHUB_OUTPUT
@@ -38,19 +44,18 @@ jobs:
             echo "content=NO_ERRORS" >> $GITHUB_OUTPUT
           fi
 
-      - name: Comment on PR if errors
+      # 5️⃣ Créer un commentaire inline dans la PR avec les suggestions
+      - name: Comment on PR with suggestions
         if: ${{ steps.read_output.outputs.content != 'NO_ERRORS' }}
         uses: peter-evans/create-or-update-comment@v4
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
           issue-number: ${{ github.event.pull_request.number }}
           body: |
-            ### ❌ Naming Linter Found Issues
+            ### ❌ Naming Linter Suggested Fixes
 
-            The following naming violations were detected:
+            The following lines have naming issues. You can click **Commit suggestion** to apply the fix:
 
-            ```
+            ```suggestion
             ${{ steps.read_output.outputs.content }}
             ```
-
-            Please fix these before merging the PR.
