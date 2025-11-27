@@ -13,53 +13,67 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      # 1️⃣ Checkout
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      # 2️⃣ Python
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
           python-version: "3.x"
 
-      # 3️⃣ Run naming linter
       - name: Run naming linter
+        id: lint
+        # We allow failure so the next step can run
         run: |
           python3 LinterNamingConventions.py || true
 
-      # 4️⃣ Post inline suggestions
+      - name: Read lint suggestions
+        id: read_suggestions
+        run: |
+          if [ -f lint_suggestions.txt ]; then
+            # We use base64 to avoid issues with special characters/newlines in the output
+            echo "content=$(cat lint_suggestions.txt | base64 -w 0)" >> $GITHUB_OUTPUT
+            echo "has_errors=true" >> $GITHUB_OUTPUT
+          else
+            echo "has_errors=false" >> $GITHUB_OUTPUT
+          fi
+
       - name: Post inline suggestions on PR
+        if: ${{ steps.read_suggestions.outputs.has_errors == 'true' }}
         uses: actions/github-script@v7
         with:
           github-token: ${{ secrets.GITHUB_TOKEN }}
           script: |
-            const fs = require('fs');
-            const filePath = 'lint_suggestions.txt';
+            // 1. Decode the Base64 content
+            const raw = Buffer.from("${{ steps.read_suggestions.outputs.content }}", 'base64').toString('utf-8');
+            const lines = raw.split("\n");
 
-            if (!fs.existsSync(filePath)) return;
-
-            const content = fs.readFileSync(filePath, 'utf-8').trim();
-            if (!content) return;
-
-            const lines = content.split("\n");
             for (const line of lines) {
-              if (!line.includes("→ suggested:")) continue;
+              if (!line.trim()) continue;
 
-              const m = line.match(/^(.+):(\d+) - .+ → suggested: '(.+)'$/);
-              if (!m) continue;
+              // 2. Parse our custom format: FILE|LINE|CODE
+              // We use split with limit to handle code that might contain pipes
+              const parts = line.split("|");
+              if (parts.length < 3) continue;
 
-              const path = m[1].trim();
-              const line_number = parseInt(m[2].trim(), 10);
-              const suggestion = m[3].trim();
+              const path = parts[0].trim();
+              const lineNumber = parseInt(parts[1].trim());
+              
+              // Rejoin the rest in case the code line contained pipes
+              const codeSuggestion = parts.slice(2).join("|");
 
+              // 3. Create the Review Comment with the SUGGESTION BLOCK
               await github.rest.pulls.createReviewComment({
                 owner: context.repo.owner,
                 repo: context.repo.repo,
                 pull_number: context.payload.pull_request.number,
-                body: suggestion,
                 commit_id: context.payload.pull_request.head.sha,
                 path: path,
-                line: line_number,
-                side: "RIGHT"
+                line: lineNumber,
+                side: "RIGHT",
+                body: "```suggestion\n" + codeSuggestion + "\n```"
               });
+            }
+            
+            // Fail the workflow to block the PR until fixed
+            core.setFailed("Naming conventions violations found.");
