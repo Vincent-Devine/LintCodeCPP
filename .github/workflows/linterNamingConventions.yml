@@ -29,19 +29,20 @@ jobs:
         run: |
           python3 LinterNamingConventions.py || true
 
-      # 4️⃣ Read lint suggestions safely (base64)
+      # 4️⃣ Read lint suggestions safely
       - name: Read lint suggestions
         id: read_suggestions
         run: |
+          # Crée toujours la variable content même si le fichier n'existe pas
+          CONTENT=""
           if [ -f lint_suggestions.txt ]; then
             CONTENT=$(cat lint_suggestions.txt)
-            echo "content=$CONTENT" >> $GITHUB_OUTPUT
-          else
-            echo "content=NO_ERRORS" >> $GITHUB_OUTPUT
+          fi
+          echo "content=$CONTENT" >> $GITHUB_OUTPUT
 
-      # 5️⃣ Post individual suggestions only
+      # 5️⃣ Post individual suggestions inline
       - name: Post suggestions inline
-        if: ${{ steps.read_suggestions.outputs.content != 'NO_ERRORS' }}
+        if: ${{ steps.read_suggestions.outputs.content != '' }}
         uses: actions/github-script@v7
         with:
           github-token: ${{ secrets.GITHUB_TOKEN }}
