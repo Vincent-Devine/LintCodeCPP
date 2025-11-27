@@ -25,7 +25,6 @@ jobs:
 
       # 3️⃣ Run naming linter
       - name: Run naming linter
-        id: lint
         run: |
           python3 LinterNamingConventions.py || true
 
@@ -37,7 +36,8 @@ jobs:
           script: |
             const fs = require('fs');
             const filePath = 'lint_suggestions.txt';
-            if (!fs.existsSync(filePath)) return; // pas de suggestions
+
+            if (!fs.existsSync(filePath)) return;
 
             const content = fs.readFileSync(filePath, 'utf-8').trim();
             if (!content) return;
@@ -45,11 +45,12 @@ jobs:
             const lines = content.split("\n");
             for (const line of lines) {
               if (!line.includes("→ suggested:")) continue;
+
               const m = line.match(/^(.+):(\d+) - .+ → suggested: '(.+)'$/);
               if (!m) continue;
 
               const path = m[1].trim();
-              const line_number = parseInt(m[2].trim());
+              const line_number = parseInt(m[2].trim(), 10);
               const suggestion = m[3].trim();
 
               await github.rest.pulls.createReviewComment({
