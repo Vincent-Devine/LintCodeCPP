@@ -2,10 +2,6 @@ import re
 from pathlib import Path
 import sys
 
-# ... (Configuration and Regex definitions remain the same as your code) ...
-# ... (Use your existing definitions for regex here) ...
-
-# RE-INSERTING YOUR CONFIG FOR COMPLETENESS
 CLASS_REGEX = re.compile(r'^[A-Z][A-Za-z0-9]*$')           # PascalCase
 FUNC_REGEX = re.compile(r'^[A-Z][A-Za-z0-9]*$')             # PascalCase
 MEMBER_NONSTATIC_REGEX = re.compile(r'^_[a-zA-Z0-9]+$')     # _camelCase
@@ -29,10 +25,6 @@ def fix_name(name, kind):
         return "".join(p.capitalize() for p in parts if p)
     return name
 
-# ============================================================
-# LOGIC
-# ============================================================
-
 project_classes = set()
 project_functions = set()
 project_member_vars_nonstatic = set()
@@ -41,7 +33,6 @@ project_enums = set()
 
 source_files = list(Path('.').rglob('*.h')) + list(Path('.').rglob('*.hpp')) + list(Path('.').rglob('*.cpp'))
 
-# --- PASS 1: Collect Symbols (No changes needed) ---
 for file in source_files:
     try:
         text = file.read_text(encoding='utf-8')
@@ -73,7 +64,6 @@ for file in source_files:
                 if is_static: project_member_vars_static.add(name)
                 else: project_member_vars_nonstatic.add(name)
 
-# --- PASS 2: Check & Generate Full Line Replacement ---
 suggestions_data = []
 
 for file in source_files:
@@ -130,12 +120,7 @@ for file in source_files:
 
         # GENERATE OUTPUT IF ERROR FOUND
         if bad_name and good_name:
-            # Smart replace: only replace the whole word \bNAME\b
-            # This prevents replacing 'var' inside 'variable'
             new_line = re.sub(r'\b' + re.escape(bad_name) + r'\b', good_name, original_line)
-            
-            # FORMAT: File|Line|New_Code_Content
-            # We use a custom separator | to make parsing in JS easy
             suggestions_data.append(f"{file}|{idx}|{new_line}")
             print(f"::warning file={file},line={idx}::{bad_name} should be {good_name}")
 

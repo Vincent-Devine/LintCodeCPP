@@ -23,7 +23,6 @@ jobs:
 
       - name: Run naming linter
         id: lint
-        # We allow failure so the next step can run
         run: |
           python3 LinterNamingConventions.py || true
 
