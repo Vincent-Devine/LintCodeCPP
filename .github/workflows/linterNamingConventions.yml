@@ -29,16 +29,13 @@ jobs:
         run: |
           python3 LinterNamingConventions.py || true
 
-      # 4️⃣ Read lint suggestions safely
+      # 4️⃣ Read lint suggestions safely (base64)
       - name: Read lint suggestions
         id: read_suggestions
         run: |
           if [ -f lint_suggestions.txt ]; then
-            # Lire le fichier et l’exporter dans la sortie du step
-            CONTENT=$(cat lint_suggestions.txt)
-            echo "content<<EOF" >> $GITHUB_OUTPUT
-            echo "$CONTENT" >> $GITHUB_OUTPUT
-            echo "EOF" >> $GITHUB_OUTPUT
+            CONTENT_BASE64=$(base64 < lint_suggestions.txt)
+            echo "content=$(echo $CONTENT_BASE64 | base64 --decode)" >> $GITHUB_OUTPUT
           else
             echo "content=NO_ERRORS" >> $GITHUB_OUTPUT
 
