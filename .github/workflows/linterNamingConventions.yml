@@ -23,10 +23,20 @@ jobs:
 
       - name: Get list of modified files
         id: modified_files
-        run: |
-          # List only .h, .hpp, .cpp files modified in this PR
-          files=$(gh pr view ${{ github.event.pull_request.number }} --json files --jq '.files[].path' | grep -E "\.(h|hpp|cpp)$")
-          echo "files=$files" >> $GITHUB_OUTPUT
+        uses: actions/github-script@v7
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          script: |
+            const prFiles = await github.rest.pulls.listFiles({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              pull_number: context.payload.pull_request.number
+            });
+            const files = prFiles.data
+              .map(f => f.filename)
+              .filter(f => f.endsWith('.h') || f.endsWith('.hpp') || f.endsWith('.cpp'));
+            console.log("Modified files:", files);
+            core.setOutput("files", files.join(" "));
 
       - name: Run naming linter on modified files
         id: lint
