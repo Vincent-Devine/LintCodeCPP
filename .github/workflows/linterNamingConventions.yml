@@ -29,29 +29,23 @@ jobs:
         run: |
           python3 LinterNamingConventions.py || true
 
-      # 4️⃣ Read suggestions
-      - name: Read lint suggestions
-        id: read_suggestions
-        run: |
-          if [ -f lint_suggestions.txt ]; then
-            echo "content<<EOF" >> $GITHUB_OUTPUT
-            cat lint_suggestions.txt >> $GITHUB_OUTPUT
-            echo "EOF" >> $GITHUB_OUTPUT
-          else
-            echo "content=NO_ERRORS" >> $GITHUB_OUTPUT
-          fi
-
-      # 5️⃣ Post inline suggestions
+      # 4️⃣ Post inline suggestions
       - name: Post inline suggestions on PR
-        if: ${{ steps.read_suggestions.outputs.content != 'NO_ERRORS' }}
         uses: actions/github-script@v7
         with:
           github-token: ${{ secrets.GITHUB_TOKEN }}
           script: |
-            const lines = `${{ steps.read_suggestions.outputs.content }}`.split("\n");
+            const fs = require('fs');
+            const filePath = 'lint_suggestions.txt';
+            if (!fs.existsSync(filePath)) return; // pas de suggestions
+
+            const content = fs.readFileSync(filePath, 'utf-8').trim();
+            if (!content) return;
+
+            const lines = content.split("\n");
             for (const line of lines) {
               if (!line.includes("→ suggested:")) continue;
-              // Example format: LintClass.hpp:7 - Member 'number' must be '_number' → suggested: '_number'
+              // Format attendu: file:line - description → suggested: 'NewName'
               const m = line.match(/^(.+):(\d+) - .+ → suggested: '(.+)'$/);
               if (!m) continue;
 
@@ -69,4 +63,3 @@ jobs:
                 line: line_number,
                 side: "RIGHT"
               });
-            }
