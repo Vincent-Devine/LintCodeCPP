@@ -9,6 +9,10 @@ bool LintClass::Initialiation()
 	return true;
 }
 
-void LintClass::Update()
+void LintClass::update()
+{
+}
+
+void LintClass::windows_should_close()
 {
 }
