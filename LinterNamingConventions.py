@@ -45,11 +45,9 @@ project_member_vars_nonstatic = set()
 project_member_vars_static = set()
 project_enums = set()
 
-source_files = list(Path('.').rglob('*.h')) + \
-               list(Path('.').rglob('*.hpp')) + \
-               list(Path('.').rglob('*.cpp'))
+source_files_paths = [Path(f) for f in sys.argv[1:]]
 
-for file in source_files:
+for file in source_files_paths:
     try:
         text = file.read_text(encoding='utf-8')
     except:
@@ -101,11 +99,12 @@ for file in source_files:
 
 suggestions_data = []
 
-for file in source_files:
+for file in source_files_paths:
     try:
         text = file.read_text(encoding='utf-8')
     except:
         continue
+    
     lines = text.splitlines()
 
     for idx, line in enumerate(lines, 1):
@@ -121,7 +120,7 @@ for file in source_files:
             name = m.group(1)
             if name in project_classes and not CLASS_REGEX.match(name):
                 bad_name = name
-                good_name = fix_name(name, "function") # PascalCase
+                good_name = fix_name(name, "function")
 
         # 2. FUNCTION CHECK
         f = func_decl_regex.search(s)
@@ -156,11 +155,17 @@ for file in source_files:
         # GENERATE OUTPUT
         if bad_name and good_name and bad_name != good_name:
             new_line = re.sub(r'\b' + re.escape(bad_name) + r'\b', good_name, original_line)
-            suggestions_data.append(f"{file}|{idx}|{new_line}")
-            print(f"::warning file={file},line={idx}::{bad_name} should be {good_name}")
+            
+            # CRITICAL FIX: Ensure the file path is relative and clean for GitHub API
+            relative_path = str(file.relative_to('.'))
+            
+            suggestions_data.append(f"{relative_path}|{idx}|{new_line}")
+            print(f"::warning file={relative_path},line={idx}::{bad_name} should be {good_name}")
 
 if suggestions_data:
     with open("lint_suggestions.txt", "w", encoding="utf-8") as f:
         for item in suggestions_data:
             f.write(item + "\n")
     sys.exit(1)
+
+print("✔ All naming conventions are valid.")

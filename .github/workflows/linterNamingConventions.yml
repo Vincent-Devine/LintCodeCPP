@@ -21,28 +21,52 @@ jobs:
         with:
           python-version: "3.x"
 
-      - name: Run naming linter
-        id: lint
-        run: |
-          python3 LinterNamingConventions.py || true
+      # Identify changed files in the PR
+      - name: Find changed C++ files
+        uses: tj-actions/changed-files@v44
+        id: changes
+        with:
+          files_ignore: |
+            *.md
+            *.txt
+          files: |
+            **.cpp
+            **.hpp
+            **.h
 
+      # Run naming linter on changed files
+      - name: Run naming linter on changed files
+        id: lint
+        # Combine added and modified files into a single space-separated string
+        env:
+          CHANGED_FILES: ${{ steps.changes.outputs.modified_files }} ${{ steps.changes.outputs.added_files }}
+        run: |
+          # The script now takes the file list as arguments
+          # We allow failure (|| true) so the comment posting step can run.
+          python3 LinterNamingConventions.py $CHANGED_FILES || true
+
+      # Read suggestions
       - name: Read lint suggestions
         id: read_suggestions
         run: |
           if [ -f lint_suggestions.txt ]; then
-            # We use base64 to avoid issues with special characters/newlines in the output
+            # Using base64 to safely handle newlines and special characters in the code suggestions
             echo "content=$(cat lint_suggestions.txt | base64 -w 0)" >> $GITHUB_OUTPUT
             echo "has_errors=true" >> $GITHUB_OUTPUT
           else
             echo "has_errors=false" >> $GITHUB_OUTPUT
           fi
 
+      # Post inline suggestions
       - name: Post inline suggestions on PR
         if: ${{ steps.read_suggestions.outputs.has_errors == 'true' }}
         uses: actions/github-script@v7
         with:
           github-token: ${{ secrets.GITHUB_TOKEN }}
           script: |
+            const core = require('@actions/core');
+            const Buffer = require('buffer').Buffer;
+            
             // 1. Decode the Base64 content
             const raw = Buffer.from("${{ steps.read_suggestions.outputs.content }}", 'base64').toString('utf-8');
             const lines = raw.split("\n");
@@ -51,14 +75,11 @@ jobs:
               if (!line.trim()) continue;
 
               // 2. Parse our custom format: FILE|LINE|CODE
-              // We use split with limit to handle code that might contain pipes
               const parts = line.split("|");
               if (parts.length < 3) continue;
 
-              const path = parts[0].trim();
-              const lineNumber = parseInt(parts[1].trim());
-              
-              // Rejoin the rest in case the code line contained pipes
+              const path = parts[0].trim(); 
+              const lineNumber = parseInt(parts[1].trim(), 10);
               const codeSuggestion = parts.slice(2).join("|");
 
               // 3. Create the Review Comment with the SUGGESTION BLOCK
@@ -67,12 +88,12 @@ jobs:
                 repo: context.repo.repo,
                 pull_number: context.payload.pull_request.number,
                 commit_id: context.payload.pull_request.head.sha,
-                path: path,
+                path: path, // This path is now guaranteed to be relative and from the changed-files action
                 line: lineNumber,
                 side: "RIGHT",
-                body: "```suggestion\n" + codeSuggestion + "\n```"
+                body: "```suggestion\\n" + codeSuggestion + "\n```"
               });
             }
             
             // Fail the workflow to block the PR until fixed
-            core.setFailed("Naming conventions violations found.");
+            core.setFailed("Naming conventions violations found. See inline suggestions.");
