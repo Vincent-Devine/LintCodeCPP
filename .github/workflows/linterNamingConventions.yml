@@ -1,4 +1,4 @@
-name: Lint Naming Rules
+name: Lint Naming Rules Inline Suggestions
 
 on:
   pull_request:
@@ -34,26 +34,13 @@ jobs:
         id: read_suggestions
         run: |
           if [ -f lint_suggestions.txt ]; then
-            CONTENT_BASE64=$(base64 < lint_suggestions.txt)
-            echo "content=$(echo $CONTENT_BASE64 | base64 --decode)" >> $GITHUB_OUTPUT
+            CONTENT=$(cat lint_suggestions.txt)
+            echo "content=$CONTENT" >> $GITHUB_OUTPUT
           else
             echo "content=NO_ERRORS" >> $GITHUB_OUTPUT
 
-      # 5️⃣ Commentaire global résumé
-      - name: Comment summary on PR
-        if: ${{ steps.read_suggestions.outputs.content != 'NO_ERRORS' }}
-        uses: peter-evans/create-or-update-comment@v4
-        with:
-          token: ${{ secrets.GITHUB_TOKEN }}
-          issue-number: ${{ github.event.pull_request.number }}
-          body: |
-            ### ❌ Naming Linter Summary
-            The linter detected the following errors in your code:
-
-            ${{ steps.read_suggestions.outputs.content }}
-
-      # 6️⃣ Poster une suggestion par erreur
-      - name: Post individual suggestions
+      # 5️⃣ Post individual suggestions only
+      - name: Post suggestions inline
         if: ${{ steps.read_suggestions.outputs.content != 'NO_ERRORS' }}
         uses: actions/github-script@v7
         with:
@@ -70,7 +57,6 @@ jobs:
               const line_number = parseInt(m[2].trim());
               const suggestion = m[3].trim();
 
-              // Créer un commentaire avec suggestion inline
               await github.rest.pulls.createReviewComment({
                 owner: context.repo.owner,
                 repo: context.repo.repo,
@@ -81,4 +67,3 @@ jobs:
                 line: line_number,
                 side: "RIGHT"
               });
-            }
