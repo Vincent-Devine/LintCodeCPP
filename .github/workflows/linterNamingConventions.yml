@@ -1,8 +1,6 @@
-name: Lint Naming Conventions
+name: Linter Naming Conventions
 
 on:
-  push:
-    branches: [ main, dev ]
   pull_request:
     branches: [ main, dev ]
 
@@ -20,6 +18,35 @@ jobs:
           python-version: "3.x"
 
       - name: Run naming linter
+        id: lint
         run: |
-          echo "Running custom naming linter..."
-          python3 LinterNamingConventions.py || exit 1
+          python3 lint_naming.py || true
+
+      - name: Read lint output
+        id: read_output
+        run: |
+          if [ -f lint_output.txt ]; then
+            CONTENT=$(cat lint_output.txt)
+            echo "content<<EOF" >> $GITHUB_OUTPUT
+            echo "$CONTENT" >> $GITHUB_OUTPUT
+            echo "EOF" >> $GITHUB_OUTPUT
+          else
+            echo "content=NO_ERRORS" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Comment on PR if errors
+        if: ${{ steps.read_output.outputs.content != 'NO_ERRORS' }}
+        uses: peter-evans/create-or-update-comment@v4
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          issue-number: ${{ github.event.pull_request.number }}
+          body: |
+            ### ❌ Naming Linter Found Issues
+
+            The following naming violations were detected:
+
+            ```
+            ${{ steps.read_output.outputs.content }}
+            ```
+
+            Please fix these before merging the PR.

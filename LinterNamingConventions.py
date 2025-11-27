@@ -165,6 +165,16 @@ for file in source_files:
 # OUTPUT
 # ============================================================
 
+# Après avoir collecté les erreurs dans la liste "errors"
+
+with open("lint_output.txt", "w", encoding="utf-8") as f:
+    if errors:
+        for e in errors:
+            f.write(e + "\n")
+    else:
+        f.write("NO_ERRORS")
+
+
 if errors:
     print("❌ Naming errors detected:")
     for e in errors:
